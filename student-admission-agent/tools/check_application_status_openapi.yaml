@@ -1,0 +1,274 @@
+openapi: 3.0.3
+info:
+  title: Student Admission Application Status API
+  description: >
+    API for checking the status of a student admission application.
+    Returns current status, next steps, and key dates associated with the application.
+  version: 1.0.0
+  contact:
+    name: Admissions Office
+    email: admissions@university.edu
+
+servers:
+  - url: https://admissions.university.edu/api/v1
+    description: Production Admissions API
+
+paths:
+  /applications/{application_id}/status:
+    get:
+      operationId: checkApplicationStatus
+      summary: Check Application Status
+      description: >
+        Retrieve the current status of a student admission application using the
+        unique application ID. Returns status, stage details, next steps, and
+        estimated decision date.
+      parameters:
+        - name: application_id
+          in: path
+          required: true
+          description: The unique identifier of the student's admission application (e.g., APP-2024-001234)
+          schema:
+            type: string
+            pattern: '^APP-\d{4}-\d{6}$'
+            example: APP-2024-001234
+      responses:
+        '200':
+          description: Application status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationStatusResponse'
+              example:
+                application_id: APP-2024-001234
+                applicant_name: Jane Doe
+                program: Bachelor of Science in Computer Science
+                status: under_review
+                status_label: Under Review
+                submission_date: '2024-11-15'
+                last_updated: '2024-12-01'
+                estimated_decision_date: '2025-01-31'
+                completion_percentage: 75
+                missing_documents:
+                  - Official High School Transcript
+                checklist:
+                  - item: Application Form
+                    completed: true
+                  - item: Personal Statement
+                    completed: true
+                  - item: Letters of Recommendation
+                    completed: true
+                  - item: Official High School Transcript
+                    completed: false
+                next_steps: >
+                  Please submit your official high school transcript directly from your
+                  school to complete your application. Once received, your application
+                  will proceed to final review.
+                contact_email: admissions@university.edu
+                contact_phone: +1-800-555-0199
+        '400':
+          description: Invalid application ID format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: invalid_application_id
+                message: The application ID format is invalid. Expected format APP-YYYY-NNNNNN.
+        '404':
+          description: Application not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: application_not_found
+                message: No application found with the provided ID. Please verify your application ID.
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /applications/{application_id}/documents:
+    get:
+      operationId: getRequiredDocuments
+      summary: Get Required Documents
+      description: >
+        Retrieve the list of required and submitted documents for a specific
+        admission application.
+      parameters:
+        - name: application_id
+          in: path
+          required: true
+          description: The unique identifier of the student's admission application
+          schema:
+            type: string
+            example: APP-2024-001234
+      responses:
+        '200':
+          description: Document list retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentListResponse'
+        '404':
+          description: Application not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    ApplicationStatusResponse:
+      type: object
+      required:
+        - application_id
+        - applicant_name
+        - program
+        - status
+        - status_label
+        - submission_date
+        - last_updated
+      properties:
+        application_id:
+          type: string
+          description: Unique application identifier
+          example: APP-2024-001234
+        applicant_name:
+          type: string
+          description: Full name of the applicant
+          example: Jane Doe
+        program:
+          type: string
+          description: Name of the program applied to
+          example: Bachelor of Science in Computer Science
+        status:
+          type: string
+          description: Machine-readable status code
+          enum:
+            - submitted
+            - documents_pending
+            - under_review
+            - interview_scheduled
+            - decision_pending
+            - accepted
+            - waitlisted
+            - rejected
+            - deferred
+          example: under_review
+        status_label:
+          type: string
+          description: Human-readable status label
+          example: Under Review
+        submission_date:
+          type: string
+          format: date
+          description: Date the application was submitted
+          example: '2024-11-15'
+        last_updated:
+          type: string
+          format: date
+          description: Date the application was last updated
+          example: '2024-12-01'
+        estimated_decision_date:
+          type: string
+          format: date
+          description: Estimated date for admission decision
+          example: '2025-01-31'
+        completion_percentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Percentage of application requirements completed
+          example: 75
+        missing_documents:
+          type: array
+          items:
+            type: string
+          description: List of documents still required to complete the application
+          example:
+            - Official High School Transcript
+        checklist:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChecklistItem'
+          description: Complete checklist of application requirements
+        next_steps:
+          type: string
+          description: Guidance on what the applicant should do next
+        contact_email:
+          type: string
+          format: email
+          description: Admissions office contact email
+          example: admissions@university.edu
+        contact_phone:
+          type: string
+          description: Admissions office contact phone number
+          example: +1-800-555-0199
+
+    ChecklistItem:
+      type: object
+      required:
+        - item
+        - completed
+      properties:
+        item:
+          type: string
+          description: Name of the checklist item
+          example: Personal Statement
+        completed:
+          type: boolean
+          description: Whether this item has been completed/submitted
+          example: true
+        submitted_date:
+          type: string
+          format: date
+          description: Date item was submitted (if completed)
+          example: '2024-11-10'
+
+    DocumentListResponse:
+      type: object
+      properties:
+        application_id:
+          type: string
+          example: APP-2024-001234
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentItem'
+
+    DocumentItem:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Document name
+          example: Official High School Transcript
+        required:
+          type: boolean
+          description: Whether the document is required
+          example: true
+        submitted:
+          type: boolean
+          description: Whether the document has been submitted
+          example: false
+        instructions:
+          type: string
+          description: How to submit this document
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Machine-readable error code
+          example: application_not_found
+        message:
+          type: string
+          description: Human-readable error message
+          example: No application found with the provided ID.
